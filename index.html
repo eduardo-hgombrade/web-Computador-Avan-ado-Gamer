@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explorador Interativo: PCs Gamer de Alta Performance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Visão Geral (Objetivo & Introdução): Static text. Goal: Orient user to the application's purpose and scope.
+        - Componentes (CPU, GPU, RAM, Armazenamento, Resfriamento, Placa-Mãe, PSU): Text for Função, Características, Impacto. Interactive: For CPU, GPU, RAM, an illustrative Chart.js bar chart showing abstract 'Performance Contribution' based on selectable tiers (e.g., Low/Mid/High). New: 'Sugestão Inteligente' tab with text input and button to call Gemini API for component suggestions based on user prompt. Goal: Compare, Inform, Engage, Provide personalized insights.
+        - Métricas (FPS, Latência, Resolução, Taxa de Atualização): Text for Definição, Importância. Interactive: FPS section with a slider controlling a simple Canvas animation to demonstrate smoothness. Resolution section with text descriptions. Goal: Inform, Demonstrate, Clarify.
+        - Tendências: Text for key trends. Interactive: Chart.js bar chart for illustrative market growth. New: 'Análise de Tendências' section with text input and button to call Gemini API for elaborating on future trends based on user prompt. Goal: Inform, Visualize Data, Provide predictive/elaborative insights.
+        - Recursos (Bibliografia): Clickable links. Goal: Reference, Further Reading.
+        - Conclusão: Static text. Goal: Summarize.
+        - CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. All charts via Chart.js (Canvas). Icons are Unicode characters. Images via placehold.co.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; /* Using a common, clean font often included with Tailwind setups */
+            background-color: #F8F8F0; /* Azure Ascent: Bg (Light Beige) */
+            color: #36454F; /* Azure Ascent: Text (Charcoal Blue) */
+        }
+        .nav-link {
+            transition: color 0.3s ease, border-bottom-color 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link.active, .nav-link:hover {
+            color: #6495ED; /* Azure Ascent: Accent (Cornflower Blue) */
+            border-bottom-color: #6495ED;
+        }
+        .content-section {
+            min-height: calc(100vh - 80px); /* Adjust 80px based on nav height */
+            padding-top: 80px; /* Space for sticky nav */
+        }
+        .component-button, .metric-button, .llm-button {
+            background-color: #FFFFFF; /* Azure Ascent: ContainerBg (White) */
+            border: 1px solid #6495ED; /* Azure Ascent: Accent (Cornflower Blue) */
+            color: #36454F; /* Azure Ascent: Text (Charcoal Blue) */
+            transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease; /* Added box-shadow transition */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle initial shadow */
+        }
+        .component-button.active, .metric-button.active,
+        .component-button:hover, .metric-button:hover, .llm-button:hover {
+            background-color: #6495ED; /* Azure Ascent: Accent (Cornflower Blue) */
+            color: #FFFFFF;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* More pronounced shadow on hover/active */
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* Default max-width */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Base height */
+            max-height: 400px; /* Max height */
+            background-color: #FFFFFF; /* Ensure chart container has a background */
+            border-radius: 12px; /* Slightly more rounded */
+            padding: 1rem; /* Padding inside chart container */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Modern subtle shadow */
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .chart-container {
+                height: 350px;
+            }
+        }
+        .fps-canvas-container {
+            width: 100%;
+            max-width: 400px;
+            height: 100px;
+            background-color: #E0F2F7; /* Azure Ascent: Lighter Canvas Bg (Light Cyan variant) */
+            border-radius: 8px;
+            margin: 1rem auto;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle inner shadow for depth */
+        }
+        h1, h2, h3 { color: #3498DB; /* Azure Ascent: ChartPrimary (Peter River Blue) */ }
+        .llm-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #6495ED; /* Azure Ascent: Accent (Cornflower Blue) */
+            border-radius: 8px;
+            background-color: #FFF;
+            color: #36454F; /* Azure Ascent: Text (Charcoal Blue) */
+            resize: vertical;
+            min-height: 100px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle inner shadow for input */
+        }
+        .llm-response {
+            background-color: #F8F8F8; /* A very light grey/beige for response background */
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0; /* Light grey border */
+            white-space: pre-wrap; /* Preserves whitespace and line breaks */
+            word-wrap: break-word; /* Breaks long words */
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05); /* Subtle shadow for response block */
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #6495ED; /* Azure Ascent: Accent (Cornflower Blue) */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+            display: none; /* Hidden by default */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="antialiased">
+
+    <nav class="bg-white shadow-md fixed top-0 left-0 right-0 z-50">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-[#3498DB]">PCs Gamer 🚀</a>
+            <div class="space-x-4">
+                <a href="#visao-geral" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Visão Geral</a>
+                <a href="#componentes" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Componentes</a>
+                <a href="#metricas" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Métricas</a>
+                <a href="#tendencias" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Tendências</a>
+                <a href="#recursos" class="nav-link px-3 py-2 rounded-md text-sm font-medium">Recursos</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-6">
+
+        <section id="visao-geral" class="content-section py-16">
+            <h1 class="text-4xl font-bold mb-6 text-center">Explorando o Universo dos PCs Gamer de Alta Performance</h1>
+            <p class="text-lg mb-8 text-center max-w-3xl mx-auto">
+                Bem-vindo a este explorador interativo! Nosso objetivo é desmistificar os computadores de alta performance para jogos,
+                analisando seus componentes, como medimos seu desempenho e as futuras direções desta empolgante área da tecnologia.
+                Prepare-se para mergulhar nos detalhes que transformam uma máquina em uma verdadeira central de entretenimento e competição.
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-8 items-center bg-white p-8 rounded-xl shadow-lg">
+                <div>
+                    <h2 class="text-3xl font-semibold mb-4">Objetivo da Exploração</h2>
+                    <p class="mb-4">
+                        Esta aplicação interativa visa explorar os aspectos cruciais dos computadores de alta performance otimizados para jogos.
+                        Buscamos compreender a sinergia entre os componentes de hardware para proporcionar experiências de jogo superiores,
+                        discutir os indicadores de desempenho chave e analisar as tendências futuras que moldarão o cenário da tecnologia de jogos.
+                    </p>
+                </div>
+                <div>
+                    <h2 class="text-3xl font-semibold mb-4">Introdução ao Mundo Gamer</h2>
+                    <p class="mb-4">
+                        Os computadores de alta performance dedicados a jogos representam um segmento vibrante e tecnologicamente avançado da computação.
+                        Longe de serem apenas ferramentas de entretenimento, essas máquinas impulsionam os limites da inovação em hardware e software,
+                        oferecendo experiências imersivas, vantagens competitivas em eSports e plataformas robustas para criação de conteúdo.
+                        A demanda por realismo gráfico, taxas de quadros elevadas e tempos de resposta mínimos é o motor que impulsiona o
+                        desenvolvimento contínuo de novas tecnologias.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section id="componentes" class="content-section py-16">
+            <h1 class="text-4xl font-bold mb-6 text-center">Anatomia de um PC Gamer ⚙️</h1>
+            <p class="text-lg mb-12 text-center max-w-3xl mx-auto">
+                A performance de um computador gamer é uma sinfonia tocada por diversos componentes. Cada peça tem um papel vital,
+                desde o processamento de dados até a renderização de mundos virtuais complexos. Nesta seção, você pode explorar
+                cada componente individualmente, entender sua função, características principais e o impacto direto na sua jogatina.
+                Use os botões abaixo para navegar pelos diferentes hardwares.
+            </p>
+
+            <div class="flex flex-wrap justify-center gap-4 mb-8">
+                <button data-target="componente-cpu" class="component-button active px-6 py-3 rounded-lg font-semibold">CPU</button>
+                <button data-target="componente-gpu" class="component-button px-6 py-3 rounded-lg font-semibold">GPU</button>
+                <button data-target="componente-ram" class="component-button px-6 py-3 rounded-lg font-semibold">RAM</button>
+                <button data-target="componente-armazenamento" class="component-button px-6 py-3 rounded-lg font-semibold">Armazenamento</button>
+                <button data-target="componente-resfriamento" class="component-button px-6 py-3 rounded-lg font-semibold">Resfriamento</button>
+                <button data-target="componente-placa-mae" class="component-button px-6 py-3 rounded-lg font-semibold">Placa-Mãe</button>
+                <button data-target="componente-psu" class="component-button px-6 py-3 rounded-lg font-semibold">PSU</button>
+                <button data-target="componente-sugestao-inteligente" class="component-button px-6 py-3 rounded-lg font-semibold">Sugestão Inteligente ✨</button>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <div id="componente-cpu" class="component-content">
+                    <h2 class="text-3xl font-semibold mb-4">Unidade Central de Processamento (CPU) - O Cérebro</h2>
+                    <p class="mb-2"><strong>Função:</strong> Responsável por processar a lógica do jogo, IA, física e interações.</p>
+                    <p class="mb-2"><strong>Características Chave:</strong></p>
+                    <ul class="list-disc list-inside ml-4 mb-2">
+                        <li>Núcleos (Cores): Múltiplos núcleos para processamento paralelo.</li>
+                        <li>Frequência (Clock Speed): Velocidade de processamento (GHz).</li>
+                        <li>Cache: Memória rápida para dados frequentes.</li>
+                    </ul>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> Afeta fluidez em cenários complexos, comportamento de NPCs e FPS mínimo.</p>
+                    <div class="chart-container my-4"><canvas id="cpuChart"></canvas></div>
+                    <p class="text-sm text-center">Gráfico ilustrativo: Contribuição para performance (quanto maior, melhor).</p>
+                </div>
+
+                <div id="componente-gpu" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Unidade de Processamento Gráfico (GPU) - O Coração Visual</h2>
+                    <img src="https://placehold.co/600x300/E0F2F7/36454F?text=GPU+High-End" alt="GPU de Alta Performance" class="mx-auto my-4 rounded-lg shadow-md" onerror="this.src='https://placehold.co/600x300/E0F2F7/36454F?text=Erro+ao+carregar+imagem+GPU'; this.alt='Imagem de GPU indisponível'">
+                    <p class="mb-2"><strong>Função:</strong> Renderiza imagens, texturas, modelos 3D e efeitos visuais.</p>
+                    <p class="mb-2"><strong>Características Chave:</strong></p>
+                    <ul class="list-disc list-inside ml-4 mb-2">
+                        <li>VRAM (Video RAM): Memória dedicada para dados gráficos.</li>
+                        <li>Núcleos CUDA/Stream Processors: Unidades de processamento gráfico.</li>
+                        <li>Ray Tracing: Renderização avançada de luz e sombras.</li>
+                    </ul>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> Componente mais crítico para qualidade gráfica e FPS.</p>
+                    <div class="chart-container my-4"><canvas id="gpuChart"></canvas></div>
+                     <p class="text-sm text-center">Gráfico ilustrativo: Contribuição para performance (quanto maior, melhor).</p>
+                </div>
+
+                <div id="componente-ram" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Memória de Acesso Aleatório (RAM) - A Memória de Curto Prazo</h2>
+                    <p class="mb-2"><strong>Função:</strong> Armazena dados temporários para acesso rápido pela CPU e GPU.</p>
+                    <p class="mb-2"><strong>Características Chave:</strong></p>
+                    <ul class="list-disc list-inside ml-4 mb-2">
+                        <li>Capacidade (GB): 16GB é padrão, 32GB ideal para multitarefas/jogos exigentes.</li>
+                        <li>Velocidade (MHz): Afeta a rapidez do acesso aos dados (DDR4, DDR5).</li>
+                    </ul>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> Insuficiência causa travamentos, lentidão e "stuttering".</p>
+                    <div class="chart-container my-4"><canvas id="ramChart"></canvas></div>
+                     <p class="text-sm text-center">Gráfico ilustrativo: Contribuição para performance (quanto maior, melhor).</p>
+                </div>
+
+                <div id="componente-armazenamento" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Armazenamento (SSD/NVMe) - Onde Tudo Fica Guardado</h2>
+                    <p class="mb-2"><strong>Função:</strong> Armazena SO, jogos, programas e arquivos.</p>
+                    <p class="mb-2"><strong>Características Chave:</strong></p>
+                    <ul class="list-disc list-inside ml-4 mb-2">
+                        <li>SSD (Solid State Drive): Muito mais rápido que HDDs.</li>
+                        <li>NVMe (Non-Volatile Memory Express): Interface ultrarrápida via PCIe.</li>
+                    </ul>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> Reduz drasticamente tempos de carregamento, melhora responsividade.</p>
+                    <p class="text-center mt-4 text-2xl">⚡️ SSDs NVMe podem carregar jogos até 10x mais rápido que HDDs tradicionais! ⚡️</p>
+                </div>
+
+                <div id="componente-resfriamento" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Sistema de Resfriamento - Mantendo a Cabeça Fria ❄️</h2>
+                    <img src="https://placehold.co/600x300/E0F2F7/36454F?text=Water+Cooler+em+A%C3%A7%C3%A3o" alt="Sistema de Water Cooler" class="mx-auto my-4 rounded-lg shadow-md" onerror="this.src='https://placehold.co/600x300/E0F2F7/36454F?text=Erro+ao+carregar+imagem+Resfriamento'; this.alt='Imagem de sistema de resfriamento indisponível'">
+                    <p class="mb-2"><strong>Função:</strong> Dissipa calor da CPU e GPU para evitar superaquecimento.</p>
+                    <p class="mb-2"><strong>Tipos:</strong></p>
+                    <ul class="list-disc list-inside ml-4 mb-2">
+                        <li>Air Cooling: Dissipadores e ventoinhas.</li>
+                        <li>Liquid Cooling (Water Cooler): Líquido transfere calor para radiador, mais eficiente para alta performance.</li>
+                    </ul>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> Previne "thermal throttling", mantém performance consistente.</p>
+                </div>
+
+                <div id="componente-placa-mae" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Placa-Mãe (Motherboard) - A Espinha Dorsal</h2>
+                    <p class="mb-2"><strong>Função:</strong> Conecta todos os componentes e permite comunicação entre eles.</p>
+                    <p class="mb-2"><strong>Características Chave:</b> Suporte a CPU, slots RAM, slots PCIe (GPU, NVMe), conectividade.</p>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> Define compatibilidade, capacidade de expansão e estabilidade geral.</p>
+                </div>
+
+                <div id="componente-psu" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Fonte de Alimentação (PSU) - A Energia Vital</h2>
+                    <p class="mb-2"><strong>Função:</strong> Fornece energia elétrica para todos os componentes.</p>
+                    <p class="mb-2"><strong>Características Chave:</strong> Potência (Watts), eficiência (80 Plus Bronze, Gold, etc.).</p>
+                    <p class="mb-4"><strong>Impacto no Jogo:</strong> PSU inadequada causa instabilidade e pode danificar componentes.</p>
+                </div>
+
+                <div id="componente-sugestao-inteligente" class="component-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Sugestão Inteligente de Componentes ✨</h2>
+                    <p class="mb-4">Descreva sua necessidade (ex: "Sugira uma configuração de PC gamer com orçamento de R$ 5000 para jogos em 1080p" ou "Qual a melhor GPU para jogar Cyberpunk 2077 com R$ 3000?").</p>
+                    <textarea id="componentSuggestionInput" class="llm-textarea mb-4" placeholder="Digite sua pergunta aqui..."></textarea>
+                    <button id="getComponentSuggestionBtn" class="llm-button px-6 py-3 rounded-lg font-semibold">Obter Sugestão ✨</button>
+                    <div id="componentSuggestionLoading" class="loading-spinner"></div>
+                    <div id="componentSuggestionOutput" class="llm-response mt-4"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="metricas" class="content-section py-16">
+            <h1 class="text-4xl font-bold mb-6 text-center">Medindo a Potência: Métricas Cruciais 📊</h1>
+            <p class="text-lg mb-12 text-center max-w-3xl mx-auto">
+                Entender como um PC gamer performa vai além de apenas "rodar o jogo". Existem métricas específicas que nos ajudam a
+                quantificar a experiência de jogo. Nesta seção, exploraremos os indicadores chave como FPS, latência, resolução e
+                taxa de atualização do monitor. Use os botões para aprender sobre cada métrica.
+            </p>
+
+            <div class="flex flex-wrap justify-center gap-4 mb-8">
+                <button data-target="metrica-fps" class="metric-button active px-6 py-3 rounded-lg font-semibold">FPS</button>
+                <button data-target="metrica-latencia" class="metric-button px-6 py-3 rounded-lg font-semibold">Latência</button>
+                <button data-target="metrica-resolucao" class="metric-button px-6 py-3 rounded-lg font-semibold">Resolução</button>
+                <button data-target="metrica-taxa-atualizacao" class="metric-button px-6 py-3 rounded-lg font-semibold">Taxa de Atualização</button>
+            </div>
+
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <div id="metrica-fps" class="metric-content">
+                    <h2 class="text-3xl font-semibold mb-4">Quadros Por Segundo (FPS)</h2>
+                    <p class="mb-2"><strong>Definição:</strong> O número de imagens que o monitor exibe por segundo.</p>
+                    <p class="mb-4"><strong>Importância:</strong> Quanto maior o FPS, mais fluida e responsiva é a experiência. 60+ FPS é bom, 144+ FPS ideal para competitivos.</p>
+                    <div class="my-4">
+                        <label for="fpsSlider" class="block text-sm font-medium mb-1">Simulador de Fluidez (FPS): <span id="fpsValue">60</span> FPS</label>
+                        <input type="range" id="fpsSlider" min="15" max="144" value="60" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#6495ED]">
+                        <div class="fps-canvas-container mt-2"><canvas id="fpsCanvas"></canvas></div>
+                        <p class="text-xs text-center">Arraste o slider para ver o impacto visual do FPS (animação ilustrativa).</p>
+                    </div>
+                </div>
+
+                <div id="metrica-latencia" class="metric-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Latência (Input Lag)</h2>
+                    <p class="mb-2"><strong>Definição:</strong> O tempo entre uma ação do jogador (ex: clique) e a resposta visual na tela.</p>
+                    <p class="mb-4"><strong>Importância:</strong> Baixa latência é crucial em jogos competitivos, onde milissegundos contam.</p>
+                </div>
+
+                <div id="metrica-resolucao" class="metric-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Resolução</h2>
+                    <p class="mb-2"><strong>Definição:</strong> Número de pixels na tela (ex: 1920x1080 Full HD, 2560x1440 QHD, 3840x2160 4K).</p>
+                    <p class="mb-4"><strong>Importância:</strong> Resoluções mais altas = imagens mais nítidas e detalhadas, mas exigem mais da GPU.</p>
+                    <div class="grid md:grid-cols-3 gap-4 text-center">
+                        <div><p class="font-semibold">Full HD (1080p)</p><p class="text-sm">Bom para a maioria dos jogos, performance equilibrada.</p></div>
+                        <div><p class="font-semibold">QHD (1440p)</p><p class="text-sm">Ótimo detalhe visual, bom para monitores maiores.</p></div>
+                        <div><p class="font-semibold">4K (2160p)</p><p class="text-sm">Máxima nitidez, exige GPUs de ponta.</p></div>
+                    </div>
+                </div>
+
+                <div id="metrica-taxa-atualizacao" class="metric-content hidden">
+                    <h2 class="text-3xl font-semibold mb-4">Taxa de Atualização do Monitor (Refresh Rate)</h2>
+                    <p class="mb-2"><strong>Definição:</strong> Frequência com que o monitor atualiza a imagem (Hz).</p>
+                    <p class="mb-4"><strong>Importância:</strong> Monitor de 144Hz+ exibe mais quadros/segundo, aproveitando alto FPS para suavidade visual.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="tendencias" class="content-section py-16">
+            <h1 class="text-4xl font-bold mb-6 text-center">O Futuro é Agora: Tendências do Mercado 📈</h1>
+            <p class="text-lg mb-12 text-center max-w-3xl mx-auto">
+                O mercado de PCs gamers é um ecossistema em constante evolução. Novas tecnologias surgem, as expectativas dos jogadores aumentam
+                e a indústria se adapta. Nesta seção, vamos olhar para os dados e tendências que estão moldando o presente e o futuro
+                dos computadores de alta performance para jogos, incluindo o crescimento do mercado e o impacto de inovações como IA e VR.
+            </p>
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-semibold mb-6">Principais Tendências:</h2>
+                <ul class="list-disc list-inside space-y-3 mb-8">
+                    <li><strong>Crescimento Contínuo:</strong> O mercado global de hardware para jogos continua a expandir, impulsionado por eSports, streaming e a busca por imersão.</li>
+                    <li><strong>Dominância da GPU:</strong> GPUs permanecem cruciais, com inovações rápidas em Ray Tracing e upscaling (DLSS/FSR).</li>
+                    <li><strong>Adoção de NVMe:</strong> SSDs NVMe se consolidam, tornando carregamentos quase instantâneos.</li>
+                    <li><strong>Sustentabilidade e Eficiência:</strong> Crescente foco em desempenho por watt.</li>
+                    <li><strong>Realidade Virtual (VR) e Aumentada (AR):</strong> PCs potentes são fundamentais para o avanço dessas tecnologias.</li>
+                    <li><strong>Integração de IA:</strong> IA otimiza gráficos, melhora desempenho e aprimora a jogabilidade.</li>
+                </ul>
+                <div class="chart-container my-4"><canvas id="marketGrowthChart"></canvas></div>
+                <p class="text-sm text-center">Gráfico ilustrativo: Crescimento estimado do mercado de hardware para jogos (CAGR).</p>
+                <img src="https://placehold.co/600x300/E0F2F7/36454F?text=Setup+Gamer+Moderno" alt="Setup Gamer com Múltiplos Monitores" class="mx-auto mt-8 rounded-lg shadow-md" onerror="this.src='https://placehold.co/600x300/E0F2F7/36454F?text=Erro+ao+carregar+imagem+Setup'; this.alt='Imagem de setup gamer indisponível'">
+
+                <div class="mt-12">
+                    <h2 class="text-3xl font-semibold mb-4">Análise de Tendências Futuras ✨</h2>
+                    <p class="mb-4">Pergunte sobre o futuro das tendências em PCs gamer (ex: "Como a IA vai mudar os jogos nos próximos 5 anos?" ou "Qual o impacto da computação em nuvem nos PCs gamer?").</p>
+                    <textarea id="trendAnalysisInput" class="llm-textarea mb-4" placeholder="Digite sua pergunta aqui..."></textarea>
+                    <button id="getTrendAnalysisBtn" class="llm-button px-6 py-3 rounded-lg font-semibold">Analisar Tendência ✨</button>
+                    <div id="trendAnalysisLoading" class="loading-spinner"></div>
+                    <div id="trendAnalysisOutput" class="llm-response mt-4"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="recursos" class="content-section py-16">
+            <h1 class="text-4xl font-bold mb-6 text-center">Para Saber Mais: Recursos e Fontes 📚</h1>
+            <p class="text-lg mb-12 text-center max-w-3xl mx-auto">
+                A jornada pelo conhecimento não termina aqui. Se você deseja aprofundar seus estudos sobre computadores de alta performance
+                para jogos, compilamos uma lista de fontes e publicações conceituadas na área de tecnologia. Estes recursos
+                oferecem análises detalhadas, notícias e guias para mantê-lo atualizado.
+            </p>
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-3xl font-semibold mb-6">Bibliografia Ilustrativa:</h2>
+                <ul class="list-disc list-inside space-y-3">
+                    <li><strong>TechRadar:</strong> Guias e notícias sobre componentes. <a href="https://www.techradar.com/br" target="_blank" class="text-[#6495ED] hover:underline">Visitar TechRadar</a></li>
+                    <li><strong>AnandTech:</strong> Análises técnicas detalhadas de hardware. <a href="https://www.anandtech.com/" target="_blank" class="text-[#6495ED] hover:underline">Visitar AnandTech</a></li>
+                    <li><strong>Gartner / IDC Research Reports:</strong> Relatórios sobre tendências de mercado (geralmente pagos).</li>
+                    <li><strong>NVIDIA Developer Blog:</strong> Inovações em GPUs e IA. <a href="https://developer.nvidia.com/blog" target="_blank" class="text-[#6495ED] hover:underline">Visitar NVIDIA Dev Blog</a></li>
+                    <li><strong>AMD Developer Central:</strong> Novidades sobre CPUs e GPUs AMD. <a href="https://www.amd.com/en/developer" target="_blank" class="text-[#6495ED] hover:underline">Visitar AMD Dev Central</a></li>
+                    <li><strong>Tom's Hardware:</strong> Benchmarks, reviews e guias de hardware. <a href="https://www.tomshw.com/" target="_blank" class="text-[#6495ED] hover:underline">Visitar Tom's Hardware</a></li>
+                </ul>
+            </div>
+        </section>
+
+         <section id="conclusao" class="content-section py-16 text-center">
+            <h1 class="text-4xl font-bold mb-6">Concluindo Nossa Jornada Interativa</h1>
+            <div class="max-w-3xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+                <p class="text-lg mb-4">
+                    Os computadores de alta performance para jogos são mais do que meras máquinas; são plataformas de inovação que impulsionam o avanço da tecnologia.
+                    A escolha e a otimização de cada componente são cruciais para garantir uma experiência de jogo fluida, imersiva e competitiva.
+                </p>
+                <p class="text-lg">
+                    À medida que a tecnologia avança, podemos esperar ainda mais realismo, interatividade e desempenho, consolidando o PC gamer como um pilar
+                    fundamental da indústria tecnológica e do entretenimento digital. Esperamos que esta exploração interativa tenha sido informativa e inspiradora!
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="text-center py-8 mt-12 border-t border-[#6495ED]">
+        <p>&copy; <span id="currentYear"></span> Explorador Interativo: PCs Gamer. Todos os direitos reservados (ilustrativo).</p>
+    </footer>
+
+    <script>
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+        // Navegação suave e ativação de links
+        const navLinks = document.querySelectorAll('.nav-link');
+        const sections = document.querySelectorAll('.content-section');
+
+        function activateNavLink(targetId) {
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${targetId}`) {
+                    link.classList.add('active');
+                }
+            });
+        }
+
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    const offsetTop = targetSection.offsetTop - 70; // Ajuste para navbar fixa
+                    window.scrollTo({
+                        top: offsetTop,
+                        behavior: 'smooth'
+                    });
+                    activateNavLink(targetId);
+                }
+            });
+        });
+        
+        // Ativar link da navegação ao rolar
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 80) { // 80 é um pouco mais que a altura da nav
+                    current = section.getAttribute('id');
+                }
+            });
+            if (current) {
+                activateNavLink(current);
+            }
+        });
+
+
+        // Lógica para abas de Componentes
+        const componentButtons = document.querySelectorAll('.component-button');
+        const componentContents = document.querySelectorAll('.component-content');
+
+        componentButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+                componentContents.forEach(content => {
+                    content.classList.add('hidden');
+                    if (content.id === targetId) {
+                        content.classList.remove('hidden');
+                    }
+                });
+                componentButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        // Lógica para abas de Métricas
+        const metricButtons = document.querySelectorAll('.metric-button');
+        const metricContents = document.querySelectorAll('.metric-content');
+
+        metricButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetId = button.dataset.target;
+                metricContents.forEach(content => {
+                    content.classList.add('hidden');
+                    if (content.id === targetId) {
+                        content.classList.remove('hidden');
+                    }
+                });
+                metricButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+            });
+        });
+
+        // Dados e configuração dos gráficos (Chart.js)
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100, // Para gráficos de contribuição
+                    ticks: { color: '#36454F' }, /* Azure Ascent: Text */
+                    grid: { color: '#E0E0E0' }
+                },
+                x: {
+                    ticks: { color: '#36454F' }, /* Azure Ascent: Text */
+                    grid: { display: false }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: '#36454F' } /* Azure Ascent: Text */
+                }
+            }
+        };
+        
+        const chartBackgroundColor = '#3498DB'; /* Azure Ascent: ChartPrimary (Peter River Blue) */
+        const chartBorderColor = '#21618C'; /* Azure Ascent: Chart Border (Darker blue) */
+
+        // Gráfico CPU
+        new Chart(document.getElementById('cpuChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Entrada', 'Médio', 'Alto Nível'],
+                datasets: [{
+                    label: 'Contribuição de Performance da CPU (Ilustrativo)',
+                    data: [40, 70, 95],
+                    backgroundColor: chartBackgroundColor,
+                    borderColor: chartBorderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Gráfico GPU
+        new Chart(document.getElementById('gpuChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Entrada', 'Médio', 'Alto Nível'],
+                datasets: [{
+                    label: 'Contribuição de Performance da GPU (Ilustrativo)',
+                    data: [50, 80, 100],
+                    backgroundColor: chartBackgroundColor,
+                    borderColor: chartBorderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: chartOptions
+        });
+
+        // Gráfico RAM
+        new Chart(document.getElementById('ramChart'), {
+            type: 'bar',
+            data: {
+                labels: ['8GB', '16GB', '32GB'],
+                datasets: [{
+                    label: 'Contribuição de Performance da RAM (Ilustrativo)',
+                    data: [50, 75, 90],
+                    backgroundColor: chartBackgroundColor,
+                    borderColor: chartBorderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: chartOptions
+        });
+        
+        // Gráfico Crescimento de Mercado
+        new Chart(document.getElementById('marketGrowthChart'), {
+            type: 'line',
+            data: {
+                labels: ['2022', '2023', '2024', '2025 (Est.)'],
+                datasets: [{
+                    label: 'Crescimento do Mercado de Hardware Gamer (USD Bilhões - Ilustrativo)',
+                    data: [150, 165, 182, 200],
+                    fill: false,
+                    borderColor: chartBackgroundColor,
+                    tension: 0.1,
+                    pointBackgroundColor: chartBorderColor,
+                    pointRadius: 5
+                }]
+            },
+            options: { ...chartOptions, scales: { ...chartOptions.scales, y: { ...chartOptions.scales.y, max: undefined } } } // Remove max para este gráfico
+        });
+
+        // Simulador de FPS com Canvas
+        const fpsSlider = document.getElementById('fpsSlider');
+        const fpsValueDisplay = document.getElementById('fpsValue');
+        const fpsCanvas = document.getElementById('fpsCanvas');
+        const fpsCtx = fpsCanvas.getContext('2d');
+        let animationFrameId;
+
+        function resizeFpsCanvas() {
+            const container = fpsCanvas.parentElement;
+            fpsCanvas.width = container.clientWidth;
+            fpsCanvas.height = container.clientHeight;
+        }
+        
+        let particleX = 10;
+        let particleSpeed = 2;
+
+        function drawFpsAnimation() {
+            fpsCtx.clearRect(0, 0, fpsCanvas.width, fpsCanvas.height);
+            
+            particleX += particleSpeed;
+            if (particleX > fpsCanvas.width - 10 || particleX < 10) {
+                particleSpeed *= -1; // Inverte a direção
+            }
+
+            fpsCtx.beginPath();
+            fpsCtx.arc(particleX, fpsCanvas.height / 2, 10, 0, Math.PI * 2);
+            fpsCtx.fillStyle = '#6495ED'; /* Azure Ascent: Accent (Cornflower Blue) */
+            fpsCtx.fill();
+        }
+
+        function animateFps() {
+            drawFpsAnimation();
+            const currentFps = parseInt(fpsSlider.value);
+            // Simula o delay entre frames. Quanto maior o FPS, menor o delay.
+            // setTimeout é usado aqui para controlar a "velocidade" da animação baseada no FPS
+            // requestAnimationFrame por si só tentaria rodar a 60fps (ou taxa do monitor)
+            // A ideia é mostrar a *percepção* de fluidez.
+            animationFrameId = setTimeout(() => {
+                requestAnimationFrame(animateFps);
+            }, 1000 / currentFps); 
+        }
+
+        fpsSlider.addEventListener('input', (e) => {
+            fpsValueDisplay.textContent = e.target.value;
+            clearTimeout(animationFrameId); // Cancela o loop anterior
+            cancelAnimationFrame(animationFrameId); // Para o RAF
+            particleX = 10; // Reseta a posição da partícula
+            particleSpeed = 2;
+            animateFps(); // Reinicia a animação com o novo FPS
+        });
+
+        // Funções para chamar a API Gemini
+        async function callGeminiAPI(prompt, outputElement, loadingElement) {
+            outputElement.textContent = '';
+            loadingElement.style.display = 'block';
+
+            let chatHistory = [];
+            chatHistory.push({ role: "user", parts: [{ text: prompt }] });
+            const payload = { contents: chatHistory };
+            const apiKey = ""; // If you want to use models other than gemini-2.0-flash or imagen-3.0-generate-002, provide an API key here. Otherwise, leave this as-is.
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const text = result.candidates[0].content.parts[0].text;
+                    outputElement.textContent = text;
+                } else {
+                    outputElement.textContent = 'Erro: Não foi possível obter uma resposta. Tente novamente.';
+                }
+            } catch (error) {
+                console.error('Erro ao chamar a API Gemini:', error);
+                outputElement.textContent = 'Erro de conexão ou servidor. Por favor, tente novamente mais tarde.';
+            } finally {
+                loadingElement.style.display = 'none';
+            }
+        }
+
+        // Lógica para Sugestão Inteligente de Componentes
+        const componentSuggestionInput = document.getElementById('componentSuggestionInput');
+        const getComponentSuggestionBtn = document.getElementById('getComponentSuggestionBtn');
+        const componentSuggestionLoading = document.getElementById('componentSuggestionLoading');
+        const componentSuggestionOutput = document.getElementById('componentSuggestionOutput');
+
+        getComponentSuggestionBtn.addEventListener('click', () => {
+            const prompt = componentSuggestionInput.value.trim();
+            if (prompt) {
+                callGeminiAPI(prompt, componentSuggestionOutput, componentSuggestionLoading);
+            } else {
+                componentSuggestionOutput.textContent = 'Por favor, digite sua pergunta para obter uma sugestão.';
+            }
+        });
+
+        // Lógica para Análise de Tendências Futuras
+        const trendAnalysisInput = document.getElementById('trendAnalysisInput');
+        const getTrendAnalysisBtn = document.getElementById('getTrendAnalysisBtn');
+        const trendAnalysisLoading = document.getElementById('trendAnalysisLoading');
+        const trendAnalysisOutput = document.getElementById('trendAnalysisOutput');
+
+        getTrendAnalysisBtn.addEventListener('click', () => {
+            const prompt = trendAnalysisInput.value.trim();
+            if (prompt) {
+                callGeminiAPI(prompt, trendAnalysisOutput, trendAnalysisLoading);
+            } else {
+                trendAnalysisOutput.textContent = 'Por favor, digite sua pergunta para analisar a tendência.';
+            }
+        });
+
+
+        // Inicializa o canvas de FPS e a primeira animação
+        window.addEventListener('load', () => {
+            resizeFpsCanvas();
+            animateFps();
+             // Ativa o primeiro link da navegação ao carregar
+            if (navLinks.length > 0) {
+                navLinks[0].classList.add('active');
+            }
+        });
+        window.addEventListener('resize', resizeFpsCanvas);
+
+    </script>
+</body>
+</html>
