@@ -1,7 +1,5 @@
 # Web Computador Avançado Gamer
 
-> Um breve parágrafo descrevendo o objetivo principal do seu projeto. Por exemplo: "Landing page moderna e responsiva para a venda de um computador gamer de alta performance, desenvolvida com foco em um design atraente e na experiência do usuário."
-
 https://github.com/user-attachments/assets/50bfa100-47a7-4034-a413-1406b0575745
 
 ## 🚀 Visão Geral
@@ -50,17 +48,8 @@ Depois de clonar, basta abrir o arquivo `index.html` em seu navegador de prefer�
 
   * **Eduardo H. Gombrade**
       * GitHub: [@eduardo-hgombrade](https://www.google.com/search?q=https://github.com/eduardo-hgombrade)
-      * LinkedIn: *[Adicione o link para seu perfil no LinkedIn, se desejar]*
+      * LinkedIn: [www.linkedin.com/in/eduardo-hennes-gombrade]
 
 ## 📄 Licença
 
 Este projeto é distribuído sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
-
------
-
-### Como usar este modelo:
-
-1.  **Copie e cole** todo o texto acima em um novo arquivo chamado `README.md` na raiz do seu repositório.
-2.  **Personalize** as seções com as informações específicas do seu projeto (altere a descrição, funcionalidades, etc.).
-3.  **Adicione uma captura de tela** para deixar o README mais visual e atraente.
-4.  **Ative o GitHub Pages** se quiser ter um link para a versão ao vivo do seu site.
