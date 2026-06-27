@@ -30,9 +30,7 @@ Para visualizar esta página, você pode seguir uma das opções abaixo:
 
 Seu projeto pode ser facilmente hospedado e visualizado através do GitHub Pages.
 
-[Clique aqui para visualizar o projeto ao vivo](https://www.google.com/search?q=https://eduardo-hgombrade.github.io/web-Computador-Avan-ado-Gamer/)
-
-> **Nota:** Este link é uma sugestão baseada no seu nome de usuário e repositório. Você precisará ativar o GitHub Pages nas configurações do seu repositório para que ele funcione.
+[Clique aqui para visualizar o projeto ao vivo](https://eduardo-hgombrade.github.io/web-Computador-Avan-ado-Gamer/)
 
 **2. Clonar o repositório:**
 
